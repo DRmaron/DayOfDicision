@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 986793f54c56f804fa9c63dc989f7757, type: 3}
+  m_Name: E001_StreetBlock
+  m_EditorClassIdentifier: 
+  eventId: E001_StreetBlock
+  phase: 0
+  priority: 10
+  eventText: "\u5012\u58CA\u3057\u305F\u9053\u8DEF\u306E\u5148\u3067\u3001\u4F4F\u6C11\u304C\u52A9\u3051\u3092\u6C42\u3081\u3066\u3044\u308B\u3002"
+  requiredFlags: []
+  consumeOnce: 0
+  choiceA:
+    label: "\u52A9\u3051\u308B (HP-1, SAN+1, \u30D5\u30E9\u30B0\u4ED8\u4E0E)"
+    resultText: 
+    hpDelta: -1
+    hungerDelta: 0
+    sanDelta: 1
+    suppliesDelta: 0
+    suppliesCost: 0
+    requiredFlags: []
+    addFlags:
+    - helpedResident1
+    removeFlags: []
+    switchPhaseAfterChoice: 0
+    nextPhase: 0
+  choiceB:
+    label: "\u7269\u8CC7\u3092\u63A2\u3059 (HP-1, \u7269\u8CC7+2)"
+    resultText: 
+    hpDelta: -1
+    hungerDelta: 0
+    sanDelta: 0
+    suppliesDelta: 2
+    suppliesCost: 0
+    requiredFlags: []
+    addFlags: []
+    removeFlags: []
+    switchPhaseAfterChoice: 0
+    nextPhase: 0

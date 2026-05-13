@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 986793f54c56f804fa9c63dc989f7757, type: 3}
+  m_Name: L004_FamilyNetwork
+  m_EditorClassIdentifier: 
+  eventId: L004_FamilyNetwork
+  phase: 1
+  priority: 11
+  eventText: "\u52A9\u3051\u305F\u5BB6\u65CF\u7D4C\u7531\u3067\u3001\u4FE1\u983C\u3067\u304D\u308B\u652F\u63F4\u60C5\u5831\u304C\u56DE\u3063\u3066\u304D\u305F\u3002"
+  requiredFlags:
+  - helpedFamily
+  consumeOnce: 1
+  choiceA:
+    label: "\u60C5\u5831\u3092\u6D3B\u7528\u3059\u308B (SAN+2)"
+    hpDelta: 0
+    hungerDelta: 0
+    sanDelta: 2
+    suppliesDelta: 0
+    suppliesCost: 0
+    requiredFlags: []
+    addFlags: []
+    removeFlags: []
+    switchPhaseAfterChoice: 0
+    nextPhase: 1
+  choiceB:
+    label: "\u7269\u8CC7\u4EA4\u63DB\u306B\u4F7F\u3046 (\u7269\u8CC7+1, SAN+1)"
+    hpDelta: 0
+    hungerDelta: 0
+    sanDelta: 1
+    suppliesDelta: 1
+    suppliesCost: 0
+    requiredFlags: []
+    addFlags: []
+    removeFlags: []
+    switchPhaseAfterChoice: 0
+    nextPhase: 1

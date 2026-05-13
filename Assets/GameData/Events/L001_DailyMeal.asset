@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 986793f54c56f804fa9c63dc989f7757, type: 3}
+  m_Name: L001_DailyMeal
+  m_EditorClassIdentifier: 
+  eventId: L001_DailyMeal
+  phase: 1
+  priority: 10
+  eventText: "\u914D\u7D66\u304C\u4E0D\u8DB3\u3057\u3066\u3044\u308B\u3002\u4ECA\u65E5\u306E\u98DF\u4E8B\u3092\u3069\u3046\u78BA\u4FDD\u3059\u308B\uFF1F"
+  requiredFlags: []
+  consumeOnce: 1
+  choiceA:
+    label: "\u7269\u8CC7\u3092\u4F7F\u3063\u3066\u98DF\u4E8B\u3092\u78BA\u4FDD (\u7269\u8CC7-1,
+      \u8179+2)"
+    hpDelta: 0
+    hungerDelta: 2
+    sanDelta: 0
+    suppliesDelta: 0
+    suppliesCost: 1
+    requiredFlags: []
+    addFlags: []
+    removeFlags: []
+    switchPhaseAfterChoice: 0
+    nextPhase: 1
+  choiceB:
+    label: "\u6211\u6162\u3059\u308B (\u8179-2, SAN-1)"
+    hpDelta: 0
+    hungerDelta: -2
+    sanDelta: -1
+    suppliesDelta: 0
+    suppliesCost: 0
+    requiredFlags: []
+    addFlags: []
+    removeFlags: []
+    switchPhaseAfterChoice: 0
+    nextPhase: 1

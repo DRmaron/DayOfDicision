@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 986793f54c56f804fa9c63dc989f7757, type: 3}
+  m_Name: L005_ElderlyAdvice
+  m_EditorClassIdentifier: 
+  eventId: L005_ElderlyAdvice
+  phase: 1
+  priority: 11
+  eventText: "\u4ECB\u52A9\u3057\u305F\u9AD8\u9F62\u8005\u304B\u3089\u8A50\u6B3A\u306E\u624B\u53E3\u3092\u6559\u3048\u3066\u3082\u3089\u3063\u305F\u3002"
+  requiredFlags:
+  - helpedElderly
+  consumeOnce: 1
+  choiceA:
+    label: "\u5468\u56F2\u306B\u3082\u5171\u6709\u3059\u308B (SAN+2)"
+    hpDelta: 0
+    hungerDelta: 0
+    sanDelta: 2
+    suppliesDelta: 0
+    suppliesCost: 0
+    requiredFlags: []
+    addFlags: []
+    removeFlags: []
+    switchPhaseAfterChoice: 0
+    nextPhase: 1
+  choiceB:
+    label: "\u81EA\u5206\u3060\u3051\u899A\u3048\u308B (SAN+1, \u7269\u8CC7+1)"
+    hpDelta: 0
+    hungerDelta: 0
+    sanDelta: 1
+    suppliesDelta: 1
+    suppliesCost: 0
+    requiredFlags: []
+    addFlags: []
+    removeFlags: []
+    switchPhaseAfterChoice: 0
+    nextPhase: 1
