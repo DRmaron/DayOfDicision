@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 public class GameUiPresenter : MonoBehaviour
@@ -20,10 +21,18 @@ public class GameUiPresenter : MonoBehaviour
     [SerializeField] private TMP_Text choiceBText;
     [SerializeField] private TMP_Text statusText;
     [SerializeField] private TMP_Text messageText;
+    [SerializeField] private TMP_Text waterText;
+    [SerializeField] private TMP_Text suppliesText;
     [SerializeField] private Button choiceAButton;
     [SerializeField] private Button choiceBButton;
+    [SerializeField] private AudioSource uiAudioSource;
+    [SerializeField] private AudioClip choiceClickClip;
+    [SerializeField] private float choiceClickVolume = 1f;
 
     private UiStep currentUiStep = UiStep.EventAndChoices;
+    private int lastHandledClickFrame = -1;
+    private float lastHandledClickTime = -999f;
+    private const float ClickDebounceSeconds = 0.08f;
 
     private void Awake()
     {
@@ -43,6 +52,11 @@ public class GameUiPresenter : MonoBehaviour
         {
             RefreshUI();
         }
+    }
+
+    private void Update()
+    {
+        HandlePointerFallbackInput();
     }
 
     public void SetGameManager(GameManager manager)
@@ -74,6 +88,8 @@ public class GameUiPresenter : MonoBehaviour
         {
             statBarView.Refresh();
         }
+
+        RefreshResourceTexts();
 
         if (currentUiStep == UiStep.ChoiceResult)
         {
@@ -135,10 +151,35 @@ public class GameUiPresenter : MonoBehaviour
 
     public void OnClickChoiceA()
     {
+        HandleChoiceClick(true);
+    }
+
+    public void OnClickChoiceB()
+    {
+        HandleChoiceClick(false);
+    }
+
+    public void HandleChoiceClick(bool isChoiceA)
+    {
+        if (lastHandledClickFrame == Time.frameCount)
+        {
+            return;
+        }
+
+        if (Time.unscaledTime - lastHandledClickTime < ClickDebounceSeconds)
+        {
+            return;
+        }
+
+        lastHandledClickFrame = Time.frameCount;
+        lastHandledClickTime = Time.unscaledTime;
+
         if (gameManager == null)
         {
             return;
         }
+
+        PlayChoiceClickSe();
 
         if (currentUiStep == UiStep.ChoiceResult)
         {
@@ -154,24 +195,15 @@ public class GameUiPresenter : MonoBehaviour
             return;
         }
 
-        gameManager.SelectChoiceA();
-        currentUiStep = UiStep.ChoiceResult;
-        RefreshUI();
-    }
-
-    public void OnClickChoiceB()
-    {
-        if (gameManager == null)
+        if (isChoiceA)
         {
-            return;
+            gameManager.SelectChoiceA();
+        }
+        else
+        {
+            gameManager.SelectChoiceB();
         }
 
-        if (currentUiStep != UiStep.EventAndChoices)
-        {
-            return;
-        }
-
-        gameManager.SelectChoiceB();
         currentUiStep = UiStep.ChoiceResult;
         RefreshUI();
     }
@@ -217,9 +249,7 @@ public class GameUiPresenter : MonoBehaviour
             + " / SAN: " + FormatSigned(gameManager.LastSanDelta)
             + " / 物資: " + FormatSigned(gameManager.LastSuppliesDelta)
             + "\n水: " + FormatSigned(gameManager.LastWaterDelta)
-            + " / 衛生: " + FormatSigned(gameManager.LastHygieneDelta)
-            + " / 信頼: " + FormatSigned(gameManager.LastTrustDelta)
-            + " / 共助: " + FormatSigned(gameManager.LastCoopDelta);
+            + " / 衛生: " + FormatSigned(gameManager.LastHygieneDelta);
     }
 
     private string FormatSigned(int value)
@@ -309,10 +339,21 @@ public class GameUiPresenter : MonoBehaviour
             sanityEffect = FindObjectOfType<SanityEffect>();
         }
 
+        if (uiAudioSource == null)
+        {
+            GameObject seManager = GameObject.Find("SEManager");
+            if (seManager != null)
+            {
+                uiAudioSource = seManager.GetComponent<AudioSource>();
+            }
+        }
+
         if (eventText == null)
         {
-            eventText = FindTmpUnder("joukyou");
+            eventText = FindScenarioText();
         }
+
+        ResolveResourceTexts();
 
         if (choiceAButton == null)
         {
@@ -343,6 +384,9 @@ public class GameUiPresenter : MonoBehaviour
         }
 
         BindChoiceButtons();
+        BindChoiceForwarders();
+        HidePrototypeLabels();
+        HideUnusedPrototypeObjects();
     }
 
     private void BindChoiceButtons()
@@ -360,17 +404,209 @@ public class GameUiPresenter : MonoBehaviour
         }
     }
 
-    private void OnDestroy()
+    private void BindChoiceForwarders()
     {
-        if (choiceAButton != null)
+        BindChoiceForwarder(choiceAButton, true);
+        BindChoiceForwarder(choiceBButton, false);
+    }
+
+    private void BindChoiceForwarder(Button button, bool isChoiceA)
+    {
+        if (button == null)
         {
-            choiceAButton.onClick.RemoveListener(OnClickChoiceA);
+            return;
         }
 
-        if (choiceBButton != null)
+        ChoiceButtonForwarder forwarder = button.GetComponent<ChoiceButtonForwarder>();
+        if (forwarder == null)
         {
-            choiceBButton.onClick.RemoveListener(OnClickChoiceB);
+            forwarder = button.gameObject.AddComponent<ChoiceButtonForwarder>();
         }
+
+        forwarder.Configure(this, isChoiceA);
+    }
+
+    private void HidePrototypeLabels()
+    {
+        TMP_Text[] texts = FindObjectsOfType<TMP_Text>(true);
+        for (int i = 0; i < texts.Length; i++)
+        {
+            TMP_Text text = texts[i];
+            if (text == null || IsControlledText(text))
+            {
+                continue;
+            }
+
+            if (IsPrototypeLabel(text.text))
+            {
+                text.gameObject.SetActive(false);
+            }
+        }
+    }
+
+    private bool IsControlledText(TMP_Text text)
+    {
+        if (text == eventText || text == choiceAText || text == choiceBText || text == statusText || text == messageText)
+        {
+            return true;
+        }
+
+        return IsChildOf(text.transform, choiceAButton != null ? choiceAButton.transform : null)
+            || IsChildOf(text.transform, choiceBButton != null ? choiceBButton.transform : null);
+    }
+
+    private static bool IsChildOf(Transform child, Transform parent)
+    {
+        return child != null && parent != null && child.IsChildOf(parent);
+    }
+
+    private static bool IsPrototypeLabel(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        string normalized = text.Replace("\r", "\n").Replace("\n", " ").Trim().Trim('\'').Trim();
+        return normalized.Contains("ta-nn")
+            || normalized.Contains("seigenzikan")
+            || normalized.Contains("seigenjikan")
+            || normalized.Contains("seigennjikann")
+            || normalized.Contains("seigennzikann")
+            || normalized.Contains("senntakusi")
+            || normalized.Contains("sentakushi")
+            || normalized.Contains("senntakushi");
+    }
+
+    private void PlayChoiceClickSe()
+    {
+        if (uiAudioSource == null || choiceClickClip == null)
+        {
+            return;
+        }
+
+        uiAudioSource.PlayOneShot(choiceClickClip, Mathf.Clamp01(choiceClickVolume));
+    }
+
+    private void HandlePointerFallbackInput()
+    {
+        if (choiceAButton == null && choiceBButton == null)
+        {
+            return;
+        }
+
+        if (Input.GetMouseButtonDown(0))
+        {
+            HandlePointerFallbackAt(Input.mousePosition);
+        }
+
+        if (Input.touchCount <= 0)
+        {
+            return;
+        }
+
+        Touch touch = Input.GetTouch(0);
+        if (touch.phase == TouchPhase.Began)
+        {
+            HandlePointerFallbackAt(touch.position);
+        }
+    }
+
+    private void HandlePointerFallbackAt(Vector2 screenPosition)
+    {
+        if (lastHandledClickFrame == Time.frameCount)
+        {
+            return;
+        }
+
+        if (CanUseButton(choiceAButton) && IsScreenPointInside(choiceAButton, screenPosition))
+        {
+            HandleChoiceClick(true);
+            return;
+        }
+
+        if (CanUseButton(choiceBButton) && IsScreenPointInside(choiceBButton, screenPosition))
+        {
+            HandleChoiceClick(false);
+        }
+    }
+
+    private static bool CanUseButton(Button button)
+    {
+        return button != null && button.gameObject.activeInHierarchy && button.interactable;
+    }
+
+    private static bool IsScreenPointInside(Button button, Vector2 screenPosition)
+    {
+        RectTransform rectTransform = button != null ? button.transform as RectTransform : null;
+        if (rectTransform == null)
+        {
+            return false;
+        }
+
+        Canvas canvas = button.GetComponentInParent<Canvas>();
+        Camera uiCamera = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay ? canvas.worldCamera : null;
+        return RectTransformUtility.RectangleContainsScreenPoint(rectTransform, screenPosition, uiCamera);
+    }
+
+    private void ResolveResourceTexts()
+    {
+        if (waterText != null || suppliesText != null)
+        {
+            return;
+        }
+
+        TMP_Text[] labels = FindTextsContaining("zannsuu");
+        if (labels.Length == 0)
+        {
+            return;
+        }
+
+        SortByAnchoredX(labels);
+        suppliesText = labels[0];
+        waterText = labels.Length > 1 ? labels[1] : labels[0];
+    }
+
+    private void RefreshResourceTexts()
+    {
+        if (gameManager == null)
+        {
+            return;
+        }
+
+        if (waterText != null && waterText == suppliesText)
+        {
+            waterText.text = "水:" + gameManager.Water + " 物資:" + gameManager.Supplies;
+            return;
+        }
+
+        if (waterText != null)
+        {
+            waterText.text = "水:" + gameManager.Water;
+        }
+
+        if (suppliesText != null)
+        {
+            suppliesText.text = "物資:" + gameManager.Supplies;
+        }
+    }
+
+    private static void HideUnusedPrototypeObjects()
+    {
+        HideObjectByName("limit");
+    }
+
+    private static void HideObjectByName(string objectName)
+    {
+        GameObject obj = GameObject.Find(objectName);
+        if (obj != null)
+        {
+            obj.SetActive(false);
+        }
+    }
+
+    private void OnDestroy()
+    {
     }
 
     private static TMP_Text FindTmpUnder(string rootName)
@@ -382,5 +618,83 @@ public class GameUiPresenter : MonoBehaviour
         }
 
         return root.GetComponentInChildren<TMP_Text>(true);
+    }
+
+    private static TMP_Text FindScenarioText()
+    {
+        TMP_Text[] texts = FindObjectsOfType<TMP_Text>(true);
+        TMP_Text best = null;
+        float bestArea = 0f;
+
+        for (int i = 0; i < texts.Length; i++)
+        {
+            TMP_Text text = texts[i];
+            if (text == null)
+            {
+                continue;
+            }
+
+            string value = text.text ?? string.Empty;
+            if (!value.Contains("joukyou"))
+            {
+                continue;
+            }
+
+            RectTransform rect = text.rectTransform;
+            float area = rect != null ? rect.rect.width * rect.rect.height : 0f;
+            if (best == null || area > bestArea)
+            {
+                best = text;
+                bestArea = area;
+            }
+        }
+
+        return best != null ? best : FindTmpUnder("joukyou");
+    }
+
+    private static TMP_Text[] FindTextsContaining(string value)
+    {
+        TMP_Text[] texts = FindObjectsOfType<TMP_Text>(true);
+        System.Collections.Generic.List<TMP_Text> matches = new System.Collections.Generic.List<TMP_Text>();
+        for (int i = 0; i < texts.Length; i++)
+        {
+            TMP_Text text = texts[i];
+            if (text != null && (text.text ?? string.Empty).Contains(value))
+            {
+                matches.Add(text);
+            }
+        }
+
+        return matches.ToArray();
+    }
+
+    private static void SortByAnchoredX(TMP_Text[] texts)
+    {
+        System.Array.Sort(texts, (a, b) =>
+        {
+            float ax = a != null && a.rectTransform != null ? a.rectTransform.anchoredPosition.x : 0f;
+            float bx = b != null && b.rectTransform != null ? b.rectTransform.anchoredPosition.x : 0f;
+            return ax.CompareTo(bx);
+        });
+    }
+}
+
+public class ChoiceButtonForwarder : MonoBehaviour, IPointerClickHandler
+{
+    private GameUiPresenter presenter;
+    private bool isChoiceA;
+
+    public void Configure(GameUiPresenter newPresenter, bool newIsChoiceA)
+    {
+        presenter = newPresenter;
+        isChoiceA = newIsChoiceA;
+    }
+
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        if (presenter != null)
+        {
+            presenter.HandleChoiceClick(isChoiceA);
+        }
     }
 }

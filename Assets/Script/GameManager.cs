@@ -184,8 +184,6 @@ public class GameManager : MonoBehaviour
             + " SAN:" + San + "/" + maxSan
             + " 水:" + Water
             + " 衛生:" + Hygiene
-            + " 信頼:" + Trust
-            + " 共助:" + Coop
             + " 物資:" + Supplies;
     }
 

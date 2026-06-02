@@ -7,7 +7,13 @@ public class StatBarView : MonoBehaviour
     public class BarBinding
     {
         public Image fillImage;
+        public SpriteRenderer spriteRenderer;
         public StatType statType;
+        public float visibleThreshold;
+
+        [System.NonSerialized] public bool initialized;
+        [System.NonSerialized] public Vector3 initialScale;
+        [System.NonSerialized] public Color initialColor;
     }
 
     public enum StatType
@@ -57,14 +63,60 @@ public class StatBarView : MonoBehaviour
         for (int i = 0; i < bars.Length; i++)
         {
             BarBinding bar = bars[i];
-            if (bar.fillImage == null)
+            if (bar.fillImage == null && bar.spriteRenderer == null)
             {
                 continue;
             }
 
             float ratio = GetRatio(bar.statType);
-            bar.fillImage.fillAmount = ratio;
+            ApplyRatio(bar, ratio);
         }
+    }
+
+    private static void ApplyRatio(BarBinding bar, float ratio)
+    {
+        if (!bar.initialized)
+        {
+            Transform targetTransform = bar.fillImage != null ? bar.fillImage.transform : bar.spriteRenderer.transform;
+            bar.initialScale = targetTransform.localScale;
+            bar.initialColor = bar.fillImage != null ? bar.fillImage.color : bar.spriteRenderer.color;
+            bar.initialized = true;
+        }
+
+        if (bar.fillImage != null)
+        {
+            bar.fillImage.fillAmount = ratio;
+            Color color = bar.fillImage.color;
+            color.a = GetDisplayAlpha(bar, ratio);
+            bar.fillImage.color = color;
+            return;
+        }
+
+        if (bar.spriteRenderer == null)
+        {
+            return;
+        }
+
+        Color spriteColor = bar.spriteRenderer.color;
+        spriteColor.a = GetDisplayAlpha(bar, ratio);
+        bar.spriteRenderer.color = spriteColor;
+
+        Transform spriteTransform = bar.spriteRenderer.transform;
+        float scaleRatio = bar.visibleThreshold > 0f && ratio < bar.visibleThreshold ? 0.85f : 1f;
+        spriteTransform.localScale = new Vector3(
+            bar.initialScale.x * scaleRatio,
+            bar.initialScale.y * scaleRatio,
+            bar.initialScale.z);
+    }
+
+    private static float GetDisplayAlpha(BarBinding bar, float ratio)
+    {
+        if (bar.visibleThreshold > 0f)
+        {
+            return ratio >= bar.visibleThreshold ? bar.initialColor.a : 0.15f;
+        }
+
+        return Mathf.Lerp(0.25f, bar.initialColor.a, ratio);
     }
 
     private float GetRatio(StatType statType)

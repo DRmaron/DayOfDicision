@@ -8,9 +8,28 @@ using UnityEngine.UI;
 public static class DisaVentureRuntimeBootstrap
 {
     private static bool evacRunStarted;
+    private static bool sceneLoadHooked;
+    private static GameObject persistentBgmManager;
+    private static AudioSource persistentBgmSource;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    private static void AfterSceneLoad()
+    private static void Initialize()
+    {
+        if (!sceneLoadHooked)
+        {
+            SceneManager.sceneLoaded += OnSceneLoaded;
+            sceneLoadHooked = true;
+        }
+
+        WireActiveScene();
+    }
+
+    private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        WireActiveScene();
+    }
+
+    private static void WireActiveScene()
     {
         string sceneName = SceneManager.GetActiveScene().name;
         if (sceneName != SceneFlowController.SceneEvac && sceneName != SceneFlowController.SceneShelter)
@@ -22,6 +41,7 @@ public static class DisaVentureRuntimeBootstrap
         GameManager gameManager = flow != null ? SceneFlowController.GetGameManager() : EnsureStandaloneGameManager();
 
         CleanupDuplicateManagers(gameManager);
+        EnsureBgmPersists();
 
         if (sceneName == SceneFlowController.SceneEvac && !evacRunStarted)
         {
@@ -34,6 +54,40 @@ public static class DisaVentureRuntimeBootstrap
         }
 
         EnsureGameUi(gameManager, sceneName == SceneFlowController.SceneEvac);
+    }
+
+    private static void EnsureBgmPersists()
+    {
+        if (persistentBgmManager != null)
+        {
+            ResumePersistentBgm();
+            return;
+        }
+
+        GameObject bgmManager = GameObject.Find("BGMManager");
+        if (bgmManager == null)
+        {
+            return;
+        }
+
+        persistentBgmManager = bgmManager;
+        persistentBgmSource = bgmManager.GetComponent<AudioSource>();
+        bgmManager.transform.SetParent(null, true);
+        Object.DontDestroyOnLoad(bgmManager);
+        ResumePersistentBgm();
+    }
+
+    private static void ResumePersistentBgm()
+    {
+        if (persistentBgmSource == null)
+        {
+            return;
+        }
+
+        if (persistentBgmSource.clip != null && !persistentBgmSource.isPlaying)
+        {
+            persistentBgmSource.Play();
+        }
     }
 
     private static SceneFlowController EnsureSceneFlowController()
@@ -125,9 +179,10 @@ public static class DisaVentureRuntimeBootstrap
         {
             statBar.Configure(new[]
             {
-                Bar(StatBarView.StatType.Hp, "hitpoint"),
-                Bar(StatBarView.StatType.Hunger, "hitpoint (1)"),
-                Bar(StatBarView.StatType.San, "hitpoint (2)"),
+                Heart("hitpoint", 0.25f),
+                Heart("hitpoint (1)", 0.5f),
+                Heart("hitpoint (2)", 0.75f),
+                Heart("hitpoint (3)", 1f),
                 Bar(StatBarView.StatType.Water, "bottle"),
                 Bar(StatBarView.StatType.Supplies, "busshi")
             });
@@ -136,27 +191,34 @@ public static class DisaVentureRuntimeBootstrap
         {
             statBar.Configure(new[]
             {
-                Bar(StatBarView.StatType.Hp, "hitpoint"),
-                Bar(StatBarView.StatType.Hunger, "hitpoint (2)"),
-                Bar(StatBarView.StatType.San, "hitpoint (3)"),
-                Bar(StatBarView.StatType.Trust, "hitpoint (4)"),
-                Bar(StatBarView.StatType.Coop, "hitpoint (5)"),
+                Heart("hitpoint (2)", 0.25f),
+                Heart("hitpoint (3)", 0.5f),
+                Heart("hitpoint (4)", 0.75f),
+                Heart("hitpoint (5)", 1f),
                 Bar(StatBarView.StatType.Water, "energy"),
                 Bar(StatBarView.StatType.Hygiene, "energy (1)"),
-                Bar(StatBarView.StatType.Supplies, "busshi")
+                Bar(StatBarView.StatType.Supplies, "bag")
             });
         }
     }
 
-    private static StatBarView.BarBinding Bar(StatBarView.StatType type, string objectName)
+    private static StatBarView.BarBinding Heart(string objectName, float threshold)
     {
-        Image image = FindFillImage(objectName);
-        return new StatBarView.BarBinding { statType = type, fillImage = image };
+        StatBarView.BarBinding binding = Bar(StatBarView.StatType.Hp, objectName);
+        binding.visibleThreshold = threshold;
+        return binding;
     }
 
-    private static Image FindFillImage(string objectName)
+    private static StatBarView.BarBinding Bar(StatBarView.StatType type, string objectName)
     {
         GameObject obj = GameObject.Find(objectName);
+        Image image = FindFillImage(obj);
+        SpriteRenderer spriteRenderer = obj != null ? obj.GetComponent<SpriteRenderer>() : null;
+        return new StatBarView.BarBinding { statType = type, fillImage = image, spriteRenderer = spriteRenderer };
+    }
+
+    private static Image FindFillImage(GameObject obj)
+    {
         if (obj == null)
         {
             return null;
