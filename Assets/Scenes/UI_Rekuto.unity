@@ -133,7 +133,7 @@ GameObject:
   - component: {fileID: 45012247}
   - component: {fileID: 45012246}
   m_Layer: 0
-  m_Name: hitpoint (3)
+  m_Name: hitpoint_4
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1047,7 +1047,7 @@ GameObject:
   - component: {fileID: 672572672}
   - component: {fileID: 672572671}
   m_Layer: 0
-  m_Name: hitpoint (2)
+  m_Name: hitpoint_3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2090,7 +2090,7 @@ GameObject:
   - component: {fileID: 1545233262}
   - component: {fileID: 1545233261}
   m_Layer: 0
-  m_Name: hitpoint
+  m_Name: hitpoint_1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2555,7 +2555,7 @@ GameObject:
   - component: {fileID: 1897154783}
   - component: {fileID: 1897154782}
   m_Layer: 0
-  m_Name: hitpoint (1)
+  m_Name: hitpoint_2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2846,7 +2846,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   sanityImage: {fileID: 1913158728}
+  sanityCanvasGroup: {fileID: 0}
   maxSanity: 100
+  baseAlpha: 1
 --- !u!114 &1913158728
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2897,7 +2899,6 @@ GameObject:
   - component: {fileID: 1938058046}
   - component: {fileID: 1938058045}
   - component: {fileID: 1938058044}
-  - component: {fileID: 1938058047}
   m_Layer: 5
   m_Name: senntakushi_A
   m_TagString: Untagged
@@ -3007,8 +3008,25 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1938058042}
   m_CullTransparentMesh: 1
---- !u!114 &1938058047
-MonoBehaviour:
+--- !u!1 &2023059502
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2023059504}
+  - component: {fileID: 2023059503}
+  m_Layer: 0
+  m_Name: main_background
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!212 &2023059503
+SpriteRenderer:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -3152,4 +3170,5 @@ SceneRoots:
   - {fileID: 56739759}
   - {fileID: 416359867}
   - {fileID: 537864854}
+  - {fileID: 2023059504}
   - {fileID: 875303256}

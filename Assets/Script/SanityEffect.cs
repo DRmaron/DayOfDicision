@@ -1,69 +1,108 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 
 public class SanityEffect : MonoBehaviour
 {
     [Header("画面端のUI Image")]
     [SerializeField] private Image sanityImage;
+    [SerializeField] private CanvasGroup sanityCanvasGroup;
 
-    [Header("SAN値の設定")]
-    [SerializeField] private float maxSanity = 100f;
+    [SerializeField] private float maxSanity = 10f;
+    [SerializeField] private float baseAlpha = 0.5f;
     private float currentSanity;
 
-    
-    void Start()
+    private void Awake()
     {
-        currentSanity = maxSanity;
-
         if (sanityImage == null)
         {
-            Debug.LogError("sanityImageがインスペクターで設定されていません！");
+            GameObject effectImage = GameObject.Find("SanityEffectImage");
+            if (effectImage != null)
+            {
+                sanityImage = effectImage.GetComponent<Image>();
+                sanityCanvasGroup = effectImage.GetComponent<CanvasGroup>();
+                if (sanityCanvasGroup == null)
+                {
+                    sanityCanvasGroup = effectImage.AddComponent<CanvasGroup>();
+                }
+            }
         }
-        else
+
+        if (sanityImage != null)
         {
-            // 最初は完全に透明（演出なし）にしておく
-            SetImageAlpha(255f);
+            sanityCanvasGroup = sanityImage.GetComponent<CanvasGroup>();
+            if (sanityCanvasGroup == null)
+            {
+                sanityCanvasGroup = sanityImage.gameObject.AddComponent<CanvasGroup>();
+            }
         }
     }
 
-    void Update()
+    private void Start()
     {
-        // テスト用：時間の経過でじわじわSAN値が減る（確認できたら消してください）
-        if (currentSanity > 0)
+        currentSanity = maxSanity;
+
+        if (sanityImage != null)
         {
-            currentSanity -= Time.deltaTime * 5f;
+            ApplyMaterialAlpha(baseAlpha);
             UpdateSanityEffect();
         }
     }
 
-    // SAN値の割合に応じて、画像の透明度を更新する
+    public void SyncFromGameManager(GameManager gameManager)
+    {
+        if (gameManager == null)
+        {
+            return;
+        }
+
+        maxSanity = Mathf.Max(1, gameManager.MaxSan);
+        currentSanity = gameManager.San;
+        UpdateSanityEffect();
+    }
+
     public void UpdateSanityEffect()
     {
-        if (sanityImage == null || sanityImage.material == null) return;
+        if (sanityImage == null || sanityImage.material == null)
+        {
+            return;
+        }
 
-        // SAN値の割合（1＝正常、0＝狂気）
         float sanityPercent = currentSanity / maxSanity;
         float insanityPercent = 1f - sanityPercent;
-
-        // SAN値が減るほど、VignetteSizeを大きくして中央まで暗闇を広げる
-        // 正常時：0.5（画面外） ➔ 完全に発狂：2.5（中心近くまで真っ黒）
         float vSize = Mathf.Lerp(0.5f, 2.5f, insanityPercent);
-
-        // マテリアルの値をリアルタイムに変更
         sanityImage.material.SetFloat("_VignetteSize", vSize);
     }
 
-    // 画像のアルファ値（透明度）だけを書き換えるヘルパー関数
     private void SetImageAlpha(float alpha)
     {
-        Color c = sanityImage.color;
-        c.a = alpha;
-        sanityImage.color = c;
+        ApplyMaterialAlpha(alpha);
     }
 
-    // 外部からSAN値を減らすための関数（敵に遭遇した時などに呼ぶ）
+    private void ApplyMaterialAlpha(float alpha)
+    {
+        float clamped = Mathf.Clamp01(alpha);
+
+        if (sanityImage != null)
+        {
+            Material material = sanityImage.material;
+            if (material != null && material.HasProperty("_Color"))
+            {
+                Color tint = material.GetColor("_Color");
+                tint.a = clamped;
+                material.SetColor("_Color", tint);
+            }
+
+            Color c = sanityImage.color;
+            c.a = clamped;
+            sanityImage.color = c;
+        }
+
+        if (sanityCanvasGroup != null)
+        {
+            sanityCanvasGroup.alpha = clamped;
+        }
+    }
+
     public void DecreaseSanity(float amount)
     {
         currentSanity = Mathf.Clamp(currentSanity - amount, 0f, maxSanity);

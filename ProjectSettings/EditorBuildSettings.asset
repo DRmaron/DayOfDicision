@@ -6,6 +6,15 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/Scenes/UI_Rekuto.unity
+    guid: 8d71494919986e348ae917cfa72e4c7d
+  - enabled: 1
+    path: Assets/Scenes/UI_Rikuto_Shelter.unity
+    guid: 1a407da2454e4654081f49c1acf82fa1
+  - enabled: 0
     path: Assets/Scenes/SampleScene.unity
     guid: 2cda990e2423bbf4892e6590ba056729
+  - enabled: 0
+    path: Assets/Scenes/Male Scene.unity
+    guid: 4082a8c246b70484fa4d7dd37c6adb57
   m_configObjects: {}

@@ -1,0 +1,58 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 986793f54c56f804fa9c63dc989f7757, type: 3}
+  m_Name: Ending
+  m_EditorClassIdentifier: 
+  eventId: ENDING
+  phase: 1
+  priority: 0
+  eventText: "Ending"
+  requiredFlags: []
+  consumeOnce: 0
+  choiceA:
+    label: "リスタート"
+    resultText: 
+    hpDelta: 0
+    hungerDelta: 0
+    sanDelta: 0
+    suppliesDelta: 0
+    waterDelta: 0
+    hygieneDelta: 0
+    trustDelta: 0
+    coopDelta: 0
+    suppliesCost: 0
+    requiredFlags: []
+    addFlags: []
+    removeFlags: []
+    switchPhaseAfterChoice: 0
+    nextPhase: 0
+    resetRunAfterChoice: 1
+  choiceB:
+    label: "-"
+    resultText: 
+    hpDelta: 0
+    hungerDelta: 0
+    sanDelta: 0
+    suppliesDelta: 0
+    waterDelta: 0
+    hygieneDelta: 0
+    trustDelta: 0
+    coopDelta: 0
+    suppliesCost: 0
+    requiredFlags: ["__never__"]
+    addFlags: []
+    removeFlags: []
+    switchPhaseAfterChoice: 0
+    nextPhase: 0
+    resetRunAfterChoice: 0
+  nextEventAfterChoiceA: {fileID: 0}
+  nextEventAfterChoiceB: {fileID: 0}

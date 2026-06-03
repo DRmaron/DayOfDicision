@@ -20,6 +20,10 @@ public class ChoiceData
     public int hungerDelta;
     public int sanDelta;
     public int suppliesDelta;
+    public int waterDelta;
+    public int hygieneDelta;
+    public int trustDelta;
+    public int coopDelta;
 
     [Header("Resource Cost / Reward")]
     public int suppliesCost;
@@ -32,6 +36,7 @@ public class ChoiceData
     [Header("Optional Transition")]
     public bool switchPhaseAfterChoice;
     public GamePhase nextPhase;
+    public bool resetRunAfterChoice;
 }
 
 [CreateAssetMenu(fileName = "EventData", menuName = "DisaVenture/Event Data")]
@@ -53,4 +58,8 @@ public class EventData : ScriptableObject
     [Header("Choices")]
     public ChoiceData choiceA;
     public ChoiceData choiceB;
+
+    [Header("PDF Sequential Flow")]
+    public EventData nextEventAfterChoiceA;
+    public EventData nextEventAfterChoiceB;
 }

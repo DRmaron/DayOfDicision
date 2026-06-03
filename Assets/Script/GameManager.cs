@@ -1,8 +1,14 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
+    public const string FlagScamVictim = "scamVictim";
+    public const string FlagScamAvoided = "scamAvoided";
+    public const string FlagRumorVictim = "rumorVictim";
+    public const string FlagRumorAvoided = "rumorAvoided";
+
     public enum RunState
     {
         Playing = 0,
@@ -10,43 +16,87 @@ public class GameManager : MonoBehaviour
         Cleared = 2
     }
 
+    [Header("Mode")]
+    [SerializeField] private bool usePdfScenario = true;
+    [SerializeField] private string startEventResourcesPath = "ScenarioPDF/Evac_01";
+    [SerializeField] private bool autoResetOnStart = false;
+
     [Header("Initial Status")]
     [SerializeField] private int maxHp = 10;
     [SerializeField] private int maxHunger = 10;
     [SerializeField] private int maxSan = 10;
+    [SerializeField] private int maxWater = 100;
+    [SerializeField] private int maxHygiene = 100;
+    [SerializeField] private int maxTrust = 100;
+    [SerializeField] private int maxCoop = 100;
     [SerializeField] private int startHp = 8;
     [SerializeField] private int startHunger = 7;
     [SerializeField] private int startSan = 7;
     [SerializeField] private int startSupplies = 0;
+    [SerializeField] private int startWater = 50;
+    [SerializeField] private int startHygiene = 50;
+    [SerializeField] private int startTrust = 50;
+    [SerializeField] private int startCoop = 0;
     [SerializeField] private GamePhase startPhase = GamePhase.Evacuation;
 
-    [Header("Event Master")]
+    [Header("Event Master (prototype fallback)")]
     [SerializeField] private List<EventData> allEvents = new List<EventData>();
     [SerializeField] private int lifePhaseGoalEvents = 6;
 
     public EventData CurrentEvent { get; private set; }
     public GamePhase CurrentPhase { get; private set; }
     public RunState CurrentRunState { get; private set; }
+    public bool PendingShelterSceneLoad { get; private set; }
+    public bool PendingEvacSceneLoad { get; private set; }
+
+    public int MaxHp => maxHp;
+    public int MaxHunger => maxHunger;
+    public int MaxSan => maxSan;
+    public int MaxWater => maxWater;
+    public int MaxHygiene => maxHygiene;
+    public int MaxTrust => maxTrust;
+    public int MaxCoop => maxCoop;
 
     public int Hp { get; private set; }
     public int Hunger { get; private set; }
     public int San { get; private set; }
     public int Supplies { get; private set; }
+    public int Water { get; private set; }
+    public int Hygiene { get; private set; }
+    public int Trust { get; private set; }
+    public int Coop { get; private set; }
+
     public string LastChoiceResultText { get; private set; }
     public int LastHpDelta { get; private set; }
     public int LastHungerDelta { get; private set; }
     public int LastSanDelta { get; private set; }
     public int LastSuppliesDelta { get; private set; }
+    public int LastWaterDelta { get; private set; }
+    public int LastHygieneDelta { get; private set; }
+    public int LastTrustDelta { get; private set; }
+    public int LastCoopDelta { get; private set; }
+
+    public event Action<GamePhase> OnPhaseChanged;
 
     private readonly HashSet<string> flags = new HashSet<string>();
     private readonly HashSet<string> consumedEventIds = new HashSet<string>();
     private readonly List<string> choiceResultLogs = new List<string>();
     private int lifePhaseCompletedEvents;
+    private bool lastChoiceWasA;
     private const int MaxChoiceResultLogs = 12;
 
     private void Start()
     {
-        ResetRun();
+        if (autoResetOnStart)
+        {
+            ResetRun();
+        }
+    }
+
+    public void ClearPendingSceneFlags()
+    {
+        PendingShelterSceneLoad = false;
+        PendingEvacSceneLoad = false;
     }
 
     public void ResetRun()
@@ -55,6 +105,10 @@ public class GameManager : MonoBehaviour
         Hunger = Mathf.Clamp(startHunger, 0, maxHunger);
         San = Mathf.Clamp(startSan, 0, maxSan);
         Supplies = Mathf.Max(0, startSupplies);
+        Water = Mathf.Clamp(startWater, 0, maxWater);
+        Hygiene = Mathf.Clamp(startHygiene, 0, maxHygiene);
+        Trust = Mathf.Clamp(startTrust, 0, maxTrust);
+        Coop = Mathf.Clamp(startCoop, 0, maxCoop);
         CurrentPhase = startPhase;
 
         flags.Clear();
@@ -62,13 +116,12 @@ public class GameManager : MonoBehaviour
         choiceResultLogs.Clear();
         lifePhaseCompletedEvents = 0;
         CurrentRunState = RunState.Playing;
+        PendingShelterSceneLoad = false;
+        PendingEvacSceneLoad = false;
+        ClearLastDeltas();
         LastChoiceResultText = string.Empty;
-        LastHpDelta = 0;
-        LastHungerDelta = 0;
-        LastSanDelta = 0;
-        LastSuppliesDelta = 0;
 
-        CurrentEvent = PickNextEvent();
+        CurrentEvent = PickStartEvent();
     }
 
     public void SelectChoiceA()
@@ -78,6 +131,7 @@ public class GameManager : MonoBehaviour
             return;
         }
 
+        lastChoiceWasA = true;
         ApplyChoice(CurrentEvent.choiceA);
     }
 
@@ -88,17 +142,49 @@ public class GameManager : MonoBehaviour
             return;
         }
 
+        lastChoiceWasA = false;
         ApplyChoice(CurrentEvent.choiceB);
+    }
+
+    public string GetEventText(EventData eventData)
+    {
+        if (eventData == null)
+        {
+            return string.Empty;
+        }
+
+        if (eventData.eventId == "EVAC_RESULT")
+        {
+            return BuildEvacResultText();
+        }
+
+        if (eventData.eventId == "ENDING")
+        {
+            return BuildEndingText();
+        }
+
+        if (eventData.eventId == "SH_02")
+        {
+            return BuildShelter02Text(eventData.eventText);
+        }
+
+        string pdfText = PdfScenarioTextProvider.GetText(eventData.eventId);
+        if (!string.IsNullOrWhiteSpace(pdfText))
+        {
+            return pdfText;
+        }
+
+        return eventData.eventText;
     }
 
     public string GetStatusText()
     {
-        return "HP: " + Hp + "/" + maxHp
-            + "  腹: " + Hunger + "/" + maxHunger
-            + "  SAN: " + San + "/" + maxSan
-            + "  物資: " + Supplies
-            + "  フェーズ: " + CurrentPhase
-            + "  状態: " + CurrentRunState;
+        return "HP:" + Hp + "/" + maxHp
+            + " 腹:" + Hunger + "/" + maxHunger
+            + " SAN:" + San + "/" + maxSan
+            + " 水:" + Water
+            + " 衛生:" + Hygiene
+            + " 物資:" + Supplies;
     }
 
     public string GetChoiceALockReason()
@@ -122,6 +208,11 @@ public class GameManager : MonoBehaviour
         return string.Join("\n", choiceResultLogs.GetRange(startIndex, choiceResultLogs.Count - startIndex));
     }
 
+    public bool HasFlag(string flag)
+    {
+        return !string.IsNullOrWhiteSpace(flag) && flags.Contains(flag);
+    }
+
     private void ApplyChoice(ChoiceData choice)
     {
         if (CurrentRunState != RunState.Playing)
@@ -136,36 +227,58 @@ public class GameManager : MonoBehaviour
             return;
         }
 
+        EventData previousEvent = CurrentEvent;
         Supplies = Mathf.Max(0, Supplies - choice.suppliesCost);
 
         int beforeHp = Hp;
         int beforeHunger = Hunger;
         int beforeSan = San;
         int beforeSupplies = Supplies;
+        int beforeWater = Water;
+        int beforeHygiene = Hygiene;
+        int beforeTrust = Trust;
+        int beforeCoop = Coop;
 
         Hp = Mathf.Clamp(Hp + choice.hpDelta, 0, maxHp);
         Hunger = Mathf.Clamp(Hunger + choice.hungerDelta, 0, maxHunger);
         San = Mathf.Clamp(San + choice.sanDelta, 0, maxSan);
         Supplies = Mathf.Max(0, Supplies + choice.suppliesDelta);
+        Water = Mathf.Clamp(Water + choice.waterDelta, 0, maxWater);
+        Hygiene = Mathf.Clamp(Hygiene + choice.hygieneDelta, 0, maxHygiene);
+        Trust = Mathf.Clamp(Trust + choice.trustDelta, 0, maxTrust);
+        Coop = Mathf.Clamp(Coop + choice.coopDelta, 0, maxCoop);
 
         LastHpDelta = Hp - beforeHp;
         LastHungerDelta = Hunger - beforeHunger;
         LastSanDelta = San - beforeSan;
         LastSuppliesDelta = Supplies - beforeSupplies;
+        LastWaterDelta = Water - beforeWater;
+        LastHygieneDelta = Hygiene - beforeHygiene;
+        LastTrustDelta = Trust - beforeTrust;
+        LastCoopDelta = Coop - beforeCoop;
 
         ApplyFlagChanges(choice.addFlags, choice.removeFlags);
 
+        GamePhase phaseBefore = CurrentPhase;
         if (choice.switchPhaseAfterChoice)
         {
             CurrentPhase = choice.nextPhase;
+            if (phaseBefore != CurrentPhase)
+            {
+                OnPhaseChanged?.Invoke(CurrentPhase);
+                if (CurrentPhase == GamePhase.PostEvacuation && previousEvent != null && previousEvent.eventId == "EVAC_RESULT")
+                {
+                    PendingShelterSceneLoad = true;
+                }
+            }
         }
 
-        if (CurrentEvent.consumeOnce && !string.IsNullOrWhiteSpace(CurrentEvent.eventId))
+        if (previousEvent != null && previousEvent.consumeOnce && !string.IsNullOrWhiteSpace(previousEvent.eventId))
         {
-            consumedEventIds.Add(CurrentEvent.eventId);
+            consumedEventIds.Add(previousEvent.eventId);
         }
 
-        if (CurrentPhase == GamePhase.PostEvacuation)
+        if (CurrentPhase == GamePhase.PostEvacuation && !usePdfScenario)
         {
             lifePhaseCompletedEvents++;
         }
@@ -174,7 +287,52 @@ public class GameManager : MonoBehaviour
         PushChoiceResultLog(LastChoiceResultText);
 
         EvaluateRunState();
-        CurrentEvent = PickNextEvent();
+
+        if (choice.resetRunAfterChoice)
+        {
+            ResetRun();
+            PendingEvacSceneLoad = true;
+            return;
+        }
+
+        CurrentEvent = ResolveNextEvent(previousEvent, choice);
+    }
+
+    private EventData ResolveNextEvent(EventData previousEvent, ChoiceData choice)
+    {
+        if (CurrentRunState != RunState.Playing)
+        {
+            return null;
+        }
+
+        if (usePdfScenario && previousEvent != null)
+        {
+            EventData linked = lastChoiceWasA ? previousEvent.nextEventAfterChoiceA : previousEvent.nextEventAfterChoiceB;
+            if (linked != null)
+            {
+                return linked;
+            }
+        }
+
+        return PickNextEvent();
+    }
+
+    private EventData PickStartEvent()
+    {
+        if (usePdfScenario && !string.IsNullOrWhiteSpace(startEventResourcesPath))
+        {
+            PdfScenarioRuntimeLinker.EnsureLinked(this);
+            PdfScenarioChoiceBootstrap.ApplyAll();
+            EventData start = Resources.Load<EventData>(startEventResourcesPath);
+            if (start != null)
+            {
+                return start;
+            }
+
+            Debug.LogError("GameManager: Could not load start event at Resources/" + startEventResourcesPath);
+        }
+
+        return PickNextEvent();
     }
 
     private string BuildChoiceResultText(ChoiceData choice)
@@ -232,7 +390,11 @@ public class GameManager : MonoBehaviour
 
         if (candidates.Count == 0)
         {
-            CurrentRunState = RunState.Cleared;
+            if (!usePdfScenario)
+            {
+                CurrentRunState = RunState.Cleared;
+            }
+
             return null;
         }
 
@@ -254,7 +416,7 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        return topPriority[Random.Range(0, topPriority.Count)];
+        return topPriority[UnityEngine.Random.Range(0, topPriority.Count)];
     }
 
     private bool CanShowEvent(EventData eventData)
@@ -268,11 +430,6 @@ public class GameManager : MonoBehaviour
         }
 
         return HasAllFlags(eventData.requiredFlags);
-    }
-
-    private bool CanUseChoice(ChoiceData choice)
-    {
-        return string.IsNullOrEmpty(GetChoiceLockReason(choice));
     }
 
     private string GetChoiceLockReason(ChoiceData choice)
@@ -310,6 +467,11 @@ public class GameManager : MonoBehaviour
         for (int i = 0; i < required.Count; i++)
         {
             string flag = required[i];
+            if (flag == "__never__")
+            {
+                return false;
+            }
+
             if (string.IsNullOrWhiteSpace(flag))
             {
                 continue;
@@ -355,15 +517,106 @@ public class GameManager : MonoBehaviour
 
     private void EvaluateRunState()
     {
-        if (Hp <= 0 || Hunger <= 0 || San <= 0)
+        if (Hp <= 0 || Hunger <= 0 || San <= 0 || Water <= 0 || Hygiene <= 0)
         {
             CurrentRunState = RunState.GameOver;
             return;
         }
 
-        if (CurrentPhase == GamePhase.PostEvacuation && lifePhaseCompletedEvents >= lifePhaseGoalEvents)
+        if (!usePdfScenario && CurrentPhase == GamePhase.PostEvacuation && lifePhaseCompletedEvents >= lifePhaseGoalEvents)
         {
             CurrentRunState = RunState.Cleared;
         }
+    }
+
+    private void ClearLastDeltas()
+    {
+        LastHpDelta = 0;
+        LastHungerDelta = 0;
+        LastSanDelta = 0;
+        LastSuppliesDelta = 0;
+        LastWaterDelta = 0;
+        LastHygieneDelta = 0;
+        LastTrustDelta = 0;
+        LastCoopDelta = 0;
+    }
+
+    private string BuildEvacResultText()
+    {
+        char grade = GetArrivalGrade();
+        switch (grade)
+        {
+            case 'A':
+                return "到着結果 A\n\n共助のおかげで、多くの人と協力しながら避難所にたどり着いた。\n体力は残っているが、少し疲れている。";
+            case 'B':
+                return "到着結果 B\n\nなんとか避難所に到着した。\n物資は少ないが、これから避難所生活が始まる。";
+            default:
+                return "到着結果 C\n\nぎりぎり避難所にたどり着いた。\n疲労と物資不足で、これからが不安だ。";
+        }
+    }
+
+    private char GetArrivalGrade()
+    {
+        if (Coop >= 3 && Supplies >= 1 && Hp >= 5)
+        {
+            return 'A';
+        }
+
+        if (Coop >= 1 || Supplies >= 1)
+        {
+            return 'B';
+        }
+
+        return 'C';
+    }
+
+    private string BuildShelter02Text(string fallback)
+    {
+        bool helped = HasFlag("helpedObstacle") || HasFlag("helpedChild");
+        if (helped)
+        {
+            return "イベント02「助けた人との再会」\n\n"
+                + "避難中に助けた人が、感謝の言葉とともに水と食料を分けてくれた。";
+        }
+
+        return "イベント02「見知らぬ避難者」\n\n"
+            + "知らない避難者が、少し距離を置いて様子を見ている。\n"
+            + "まだ避難所内の人間関係は築けていない。";
+    }
+
+    private string BuildEndingText()
+    {
+        char grade = GetEndingGrade();
+        switch (grade)
+        {
+            case 'A':
+                return "エンディング A\n\n信頼と共助のおかげで、避難所は協力して乗り越えた。\n救助が到着し、地域は回復へ向かう。";
+            case 'B':
+                return "エンディング B\n\n大きな混乱は避けられたが、いくつかの課題は残った。\nそれでも人々は助け合い、救助を待つ。";
+            case 'C':
+                return "エンディング C\n\n避難所内の不信感が残った。\n救助は来るが、回復には時間がかかるだろう。";
+            default:
+                return "エンディング D\n\n詐欺やデマに振り回され、避難所は混乱した。\n教訓を胸に、次の支援を待つしかない。";
+        }
+    }
+
+    private char GetEndingGrade()
+    {
+        if (HasFlag(FlagScamVictim) || HasFlag(FlagRumorVictim))
+        {
+            return 'D';
+        }
+
+        if (Trust >= 60 && Coop >= 4 && !HasFlag(FlagScamVictim))
+        {
+            return 'A';
+        }
+
+        if (Trust >= 40 || Coop >= 2)
+        {
+            return 'B';
+        }
+
+        return 'C';
     }
 }
