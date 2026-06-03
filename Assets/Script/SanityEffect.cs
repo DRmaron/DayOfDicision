@@ -5,8 +5,10 @@ public class SanityEffect : MonoBehaviour
 {
     [Header("画面端のUI Image")]
     [SerializeField] private Image sanityImage;
+    [SerializeField] private CanvasGroup sanityCanvasGroup;
 
     [SerializeField] private float maxSanity = 10f;
+    [SerializeField] private float baseAlpha = 0.5f;
     private float currentSanity;
 
     private void Awake()
@@ -17,6 +19,20 @@ public class SanityEffect : MonoBehaviour
             if (effectImage != null)
             {
                 sanityImage = effectImage.GetComponent<Image>();
+                sanityCanvasGroup = effectImage.GetComponent<CanvasGroup>();
+                if (sanityCanvasGroup == null)
+                {
+                    sanityCanvasGroup = effectImage.AddComponent<CanvasGroup>();
+                }
+            }
+        }
+
+        if (sanityImage != null)
+        {
+            sanityCanvasGroup = sanityImage.GetComponent<CanvasGroup>();
+            if (sanityCanvasGroup == null)
+            {
+                sanityCanvasGroup = sanityImage.gameObject.AddComponent<CanvasGroup>();
             }
         }
     }
@@ -27,7 +43,7 @@ public class SanityEffect : MonoBehaviour
 
         if (sanityImage != null)
         {
-            SetImageAlpha(255f);
+            ApplyMaterialAlpha(baseAlpha);
             UpdateSanityEffect();
         }
     }
@@ -59,9 +75,32 @@ public class SanityEffect : MonoBehaviour
 
     private void SetImageAlpha(float alpha)
     {
-        Color c = sanityImage.color;
-        c.a = alpha / 255f;
-        sanityImage.color = c;
+        ApplyMaterialAlpha(alpha);
+    }
+
+    private void ApplyMaterialAlpha(float alpha)
+    {
+        float clamped = Mathf.Clamp01(alpha);
+
+        if (sanityImage != null)
+        {
+            Material material = sanityImage.material;
+            if (material != null && material.HasProperty("_Color"))
+            {
+                Color tint = material.GetColor("_Color");
+                tint.a = clamped;
+                material.SetColor("_Color", tint);
+            }
+
+            Color c = sanityImage.color;
+            c.a = clamped;
+            sanityImage.color = c;
+        }
+
+        if (sanityCanvasGroup != null)
+        {
+            sanityCanvasGroup.alpha = clamped;
+        }
     }
 
     public void DecreaseSanity(float amount)

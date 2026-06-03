@@ -1,6 +1,5 @@
 using TMPro;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 public class GameUiPresenter : MonoBehaviour
@@ -27,6 +26,7 @@ public class GameUiPresenter : MonoBehaviour
     [SerializeField] private Button choiceBButton;
     [SerializeField] private AudioSource uiAudioSource;
     [SerializeField] private AudioClip choiceClickClip;
+    [SerializeField] private AudioClip nextClickClip;
     [SerializeField] private float choiceClickVolume = 1f;
 
     private UiStep currentUiStep = UiStep.EventAndChoices;
@@ -68,6 +68,13 @@ public class GameUiPresenter : MonoBehaviour
         }
 
         RefreshUI();
+    }
+
+    public void ConfigureAudio(AudioSource source, AudioClip choiceClickSe, AudioClip nextClickSe)
+    {
+        uiAudioSource = source;
+        choiceClickClip = choiceClickSe;
+        nextClickClip = nextClickSe;
     }
 
     public void RefreshUI()
@@ -384,7 +391,6 @@ public class GameUiPresenter : MonoBehaviour
         }
 
         BindChoiceButtons();
-        BindChoiceForwarders();
         HidePrototypeLabels();
         HideUnusedPrototypeObjects();
     }
@@ -402,28 +408,6 @@ public class GameUiPresenter : MonoBehaviour
             choiceBButton.onClick.RemoveListener(OnClickChoiceB);
             choiceBButton.onClick.AddListener(OnClickChoiceB);
         }
-    }
-
-    private void BindChoiceForwarders()
-    {
-        BindChoiceForwarder(choiceAButton, true);
-        BindChoiceForwarder(choiceBButton, false);
-    }
-
-    private void BindChoiceForwarder(Button button, bool isChoiceA)
-    {
-        if (button == null)
-        {
-            return;
-        }
-
-        ChoiceButtonForwarder forwarder = button.GetComponent<ChoiceButtonForwarder>();
-        if (forwarder == null)
-        {
-            forwarder = button.gameObject.AddComponent<ChoiceButtonForwarder>();
-        }
-
-        forwarder.Configure(this, isChoiceA);
     }
 
     private void HidePrototypeLabels()
@@ -676,25 +660,5 @@ public class GameUiPresenter : MonoBehaviour
             float bx = b != null && b.rectTransform != null ? b.rectTransform.anchoredPosition.x : 0f;
             return ax.CompareTo(bx);
         });
-    }
-}
-
-public class ChoiceButtonForwarder : MonoBehaviour, IPointerClickHandler
-{
-    private GameUiPresenter presenter;
-    private bool isChoiceA;
-
-    public void Configure(GameUiPresenter newPresenter, bool newIsChoiceA)
-    {
-        presenter = newPresenter;
-        isChoiceA = newIsChoiceA;
-    }
-
-    public void OnPointerClick(PointerEventData eventData)
-    {
-        if (presenter != null)
-        {
-            presenter.HandleChoiceClick(isChoiceA);
-        }
     }
 }

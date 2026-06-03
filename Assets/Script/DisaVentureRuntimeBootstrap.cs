@@ -12,6 +12,15 @@ public static class DisaVentureRuntimeBootstrap
     private static GameObject persistentBgmManager;
     private static AudioSource persistentBgmSource;
 
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics()
+    {
+        evacRunStarted = false;
+        sceneLoadHooked = false;
+        persistentBgmManager = null;
+        persistentBgmSource = null;
+    }
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Initialize()
     {
@@ -171,6 +180,14 @@ public static class DisaVentureRuntimeBootstrap
 
         ConfigureStatBars(statBar, isEvacScene);
         presenter.SetGameManager(gameManager);
+
+        DisaVenturePolishController polish = uiRoot.GetComponent<DisaVenturePolishController>();
+        if (polish == null)
+        {
+            polish = uiRoot.AddComponent<DisaVenturePolishController>();
+        }
+
+        polish.Configure(presenter, isEvacScene);
     }
 
     private static void ConfigureStatBars(StatBarView statBar, bool isEvacScene)
